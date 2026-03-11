@@ -31,7 +31,10 @@ const renderPerks = function () {
             html += '<td><div data-placement="left" data-trigger="hover" data-original-title="' + perk.name + '" rel="popover" data-html="true" data-content="' + title + '" data-i="' + i + '" data-j="' + j + '" class="perk' + className + '" style="background-image:url(\'img/' + perk.img + '\');">';
 
             if (className !== ' unavailable') {
-                html += '<div class="overlay"><button class="btn btn-xs btn-danger btn-dec-perk"><i class="glyphicon glyphicon-minus"></i></button>&nbsp;' + perk.currentRank + '/' + perk.ranks + '&nbsp;<button class="btn btn-xs btn-success btn-inc-perk"><i class="glyphicon glyphicon-plus"></i></button></div>';
+                const rankClass = perk.currentRank > 0 ? ' rank-active' : '';
+                const disableDec = perk.currentRank <= 0 ? ' disabled' : '';
+                const disableInc = perk.currentRank >= perk.ranks ? ' disabled' : '';
+                html += '<div class="overlay"><button class="btn btn-xs btn-danger btn-dec-perk"' + disableDec + '><i class="glyphicon glyphicon-minus"></i></button>&nbsp;<span class="rank-display' + rankClass + '">' + perk.currentRank + '/' + perk.ranks + '</span>&nbsp;<button class="btn btn-xs btn-success btn-inc-perk"' + disableInc + '><i class="glyphicon glyphicon-plus"></i></button></div>';
             }
 
             html += '</td>';
@@ -70,8 +73,8 @@ const getRanks = function () {
 const getSPECIALShort = function () {
     const specs = [];
 
-    $('input[type="number"]').each(function () {
-        specs.push($(this).val());
+    $('.special-value').each(function () {
+        specs.push($(this).text());
     });
 
     return specs;
@@ -87,7 +90,7 @@ const getBobbleheads = function () {
 
 const getSPECIAL = function () {
     return $('[data-special]').map(function () {
-        let value = parseInt($(this).find('input[type="number"]').val());
+        let value = parseInt($(this).find('.special-value').text());
         if ($(this).find('.bobblehead-check').is(':checked')) {
             value += 1;
         }
@@ -138,70 +141,34 @@ const requiredLevelPoints = function () {
 }
 
 const unspentStats = function () {
-    const remaining = totalPoints - getAllocatedPoints();
-    return remaining > 0 ? remaining : 0;
-}
-
-const freeLevels = function () {
-    const reqLevel = Math.max(requiredLevelPerks(), requiredLevelPoints());
-    if (reqLevel <= 1) return { count: 0, levels: [] };
-
-    const usedLevels = {};
-    for (let i = 0; i < perks.length; ++i) {
-        for (let j = 0; j < perks[i].perks.length; ++j) {
-            const perk = perks[i].perks[j];
-            if (!perk.currentRank || perk.currentRank === 0) continue;
-            for (let k = 0; k < perk.currentRank; ++k) {
-                const level = perk.ranked[k].level <= 1 ? 2 : perk.ranked[k].level;
-                usedLevels[level] = true;
-            }
-        }
-    }
-
-    const levels = [];
-    for (let lvl = 2; lvl <= reqLevel; ++lvl) {
-        if (!usedLevels[lvl]) {
-            levels.push(lvl);
-        }
-    }
-    return { count: levels.length, levels: levels };
+    return totalPoints - getAllocatedPoints();
 }
 
 const renderRequiredLevel = function () {
     $('.unspent-stats').text(unspentStats());
     $('.required-level-perks').text(requiredLevelPerks());
     $('.required-level-points').text(requiredLevelPoints());
-    const free = freeLevels();
-    if (free.count === 0) {
-        $('.free-levels').text('0');
-    } else {
-        const ranges = [];
-        let start = free.levels[0];
-        let end = start;
-        for (let i = 1; i < free.levels.length; ++i) {
-            if (free.levels[i] === end + 1) {
-                end = free.levels[i];
-            } else {
-                ranges.push(start === end ? '' + start : start + '-' + end);
-                start = free.levels[i];
-                end = start;
-            }
-        }
-        ranges.push(start === end ? '' + start : start + '-' + end);
-        $('.free-levels').text('(' + free.count + ') ' + ranges.join(', '));
-    }
+}
+
+const renderSpecialButtons = function () {
+    $('[data-special]').each(function () {
+        const value = parseInt($(this).find('.special-value').text());
+        $(this).find('.btn-dec').prop('disabled', value <= 1);
+        $(this).find('.btn-inc').prop('disabled', value >= 10);
+    });
 }
 
 const renderAll = function () {
     renderPerks();
     renderRequiredLevel();
     renderSummary();
+    renderSpecialButtons();
     window.location.hash = '#' + getJSON();
 }
 
 const getAllocatedPoints = function () {
-    return $('[data-special] input[type="number"]').map(function () {
-        return parseInt($(this).val());
+    return $('.special-value').map(function () {
+        return parseInt($(this).text());
     }).get().reduce(function (prev, curr) {
         return prev + curr;
     });
@@ -227,17 +194,20 @@ const renderSummary = function () {
         }
     }
 
-    const levels = Object.keys(levelMap).map(Number).sort(function (a, b) { return a - b; });
+    const reqLevel = Math.max(requiredLevelPerks(), requiredLevelPoints());
 
     let html = '';
-    for (let i = 0; i < levels.length; ++i) {
-        const level = levels[i];
-        html += '<div class="level-heading">Level ' + level + '</div>';
-        html += '<ul class="level-perks">';
-        for (let p = 0; p < levelMap[level].length; ++p) {
-            html += '<li>' + levelMap[level][p] + '</li>';
+    for (let level = 2; level <= reqLevel; ++level) {
+        const hasPerks = levelMap[level] && levelMap[level].length > 0;
+        const headingClass = hasPerks ? 'level-heading' : 'level-heading level-free';
+        html += '<div class="' + headingClass + '">Level ' + level + '</div>';
+        if (hasPerks) {
+            html += '<ul class="level-perks">';
+            for (let p = 0; p < levelMap[level].length; ++p) {
+                html += '<li>' + levelMap[level][p] + '</li>';
+            }
+            html += '</ul>';
         }
-        html += '</ul>';
     }
 
     $('.summary').html(html);
@@ -250,8 +220,8 @@ $(function () {
     if (hash.length > 0) {
         const load = JSON.parse(atob(hash));
 
-        $('input[type=number]').each(function (index) {
-            $(this).val(load.s[index]);
+        $('.special-value').each(function (index) {
+            $(this).text(load.s[index]);
         });
 
         if (load.b) {
@@ -288,11 +258,11 @@ $(function () {
 
     $('.btn-inc').on('click', function () {
         const $li = $(this).parent().parent(),
-              $input = $li.find('input[type="number"]'),
-              value = parseInt($input.val());
+              $span = $li.find('.special-value'),
+              value = parseInt($span.text());
 
         if (value < 10) {
-            $input.val(value + 1);
+            $span.text(value + 1);
         }
 
         renderAll();
@@ -300,12 +270,12 @@ $(function () {
 
     $('.btn-dec').on('click', function () {
         const $li = $(this).parent().parent(),
-              $input = $li.find('input[type="number"]'),
-              value = parseInt($input.val()),
+              $span = $li.find('.special-value'),
+              value = parseInt($span.text()),
               special = $li.data('special');
 
         if (value > 1) {
-            $input.val(value - 1);
+            $span.text(value - 1);
 
             for (let i = 0; i < perks.length; ++i) {
                 if (perks[i].special === special) {

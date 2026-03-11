@@ -38,12 +38,18 @@
     font-weight: bold;
 }
 
-.list-special input[type="number"] {
+.special-value {
     display: inline-block;
-    width: 60px;
-    background-color: #0f3460;
+    width: 40px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
     color: #e0e0e0;
-    border-color: #533483;
+    background-color: #0b2a4e;
+    border: 1px solid #533483;
+    border-radius: 4px;
+    padding: 2px 0;
+    line-height: 1.4;
 }
 
 .list-special .bobblehead-wrap {
@@ -115,6 +121,28 @@ h3, h4 {
     color:#FFF;
     font-weight:bold;
     background-color: rgba(0,0,0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.overlay .btn-dec-perk,
+.overlay .btn-inc-perk {
+    visibility: hidden;
+}
+
+.perk:hover .overlay .btn-dec-perk,
+.perk:hover .overlay .btn-inc-perk {
+    visibility: visible;
+}
+
+
+.rank-display {
+    font-size: 18px;
+}
+
+.rank-active {
+    color: #00ff41;
 }
 
 .has-rank {
@@ -171,6 +199,10 @@ h3, h4 {
     font-weight: bold;
     margin-top: 10px;
     margin-bottom: 4px;
+}
+
+.summary .level-free {
+    color: #00ff41;
 }
 
 .summary .level-perks {
