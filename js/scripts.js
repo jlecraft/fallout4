@@ -32,9 +32,7 @@ const renderPerks = function () {
 
             if (className !== ' unavailable') {
                 const rankClass = perk.currentRank > 0 ? ' rank-active' : '';
-                const disableDec = perk.currentRank <= 0 ? ' disabled' : '';
-                const disableInc = perk.currentRank >= perk.ranks ? ' disabled' : '';
-                html += '<div class="overlay"><button class="btn btn-xs btn-danger btn-dec-perk"' + disableDec + '><i class="glyphicon glyphicon-minus"></i></button>&nbsp;<span class="rank-display' + rankClass + '">' + perk.currentRank + '/' + perk.ranks + '</span>&nbsp;<button class="btn btn-xs btn-success btn-inc-perk"' + disableInc + '><i class="glyphicon glyphicon-plus"></i></button></div>';
+                html += '<div class="overlay"><span class="rank-display' + rankClass + '">' + perk.currentRank + '/' + perk.ranks + '</span></div>';
             }
 
             html += '</td>';
@@ -158,6 +156,12 @@ const renderSpecialButtons = function () {
     });
 }
 
+const updatePerkOverlay = function ($perk, perk) {
+    const $rank = $perk.find('.rank-display');
+    $rank.text(perk.currentRank + '/' + perk.ranks);
+    $rank.toggleClass('rank-active', perk.currentRank > 0);
+}
+
 const renderAll = function () {
     renderPerks();
     renderRequiredLevel();
@@ -191,6 +195,16 @@ const renderSummary = function () {
                 }
                 levelMap[level].push(perk.name + ' (' + rankInfo.rank + ')');
             }
+        }
+    }
+
+    const overspent = getAllocatedPoints() - totalPoints;
+    if (overspent > 0) {
+        if (!levelMap[2]) {
+            levelMap[2] = [];
+        }
+        for (let n = 0; n < overspent; ++n) {
+            levelMap[2].push('S.P.E.C.I.A.L. (1)');
         }
     }
 
@@ -290,27 +304,36 @@ $(function () {
         renderAll();
     });
 
-    $('body').on('click', '.btn-inc-perk, .btn-dec-perk', function () {
-        const $container = $(this).parent().parent(),
-              i = parseInt($container.data('i')),
-              j = parseInt($container.data('j')),
-              perk = perks[j].perks[i],
-              incrementing = $(this).hasClass('btn-inc-perk');
+    $('body').on('click', '.perk:not(.unavailable)', function () {
+        const $perk = $(this),
+              i = parseInt($perk.data('i')),
+              j = parseInt($perk.data('j')),
+              perk = perks[j].perks[i];
 
-        if (!perk.currentRank) {
-            perk.currentRank = 0;
+        if (!perk.currentRank) perk.currentRank = 0;
+        if (perk.currentRank < perk.ranks) {
+            perk.currentRank += 1;
+            updatePerkOverlay($perk, perk);
+            renderRequiredLevel();
+            renderSummary();
+            window.location.hash = '#' + getJSON();
         }
+    });
 
-        if (incrementing) {
-            if (perk.currentRank < perk.ranks) {
-                perk.currentRank += 1;
-            }
-        } else {
-            if (perk.currentRank > 0) {
-                perk.currentRank -= 1;
-            }
+    $('body').on('contextmenu', '.perk:not(.unavailable)', function (e) {
+        e.preventDefault();
+        const $perk = $(this),
+              i = parseInt($perk.data('i')),
+              j = parseInt($perk.data('j')),
+              perk = perks[j].perks[i];
+
+        if (!perk.currentRank) perk.currentRank = 0;
+        if (perk.currentRank > 0) {
+            perk.currentRank -= 1;
+            updatePerkOverlay($perk, perk);
+            renderRequiredLevel();
+            renderSummary();
+            window.location.hash = '#' + getJSON();
         }
-
-        renderAll();
     });
 });
